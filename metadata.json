@@ -1,0 +1,7 @@
+{
+  "name": "Ktírio: Virtual Home Staging AI",
+  "description": "An AI-powered virtual home staging application. Users can upload or take a picture of a room, use drawing tools to select areas for modification, and provide a text prompt to generate beautifully redesigned images.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
