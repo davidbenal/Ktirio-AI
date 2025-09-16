@@ -4,6 +4,21 @@ export enum BrushMode {
   Erase = 'erase',
 }
 
+export enum ReferenceType {
+  Style = 'Estilo',
+  Object = 'Objeto/Produto',
+  Lighting = 'Iluminação',
+  Background = 'Ambiente/Segundo Plano',
+}
+
+export interface ReferenceImage {
+  id: string;
+  url: string;
+  name: string;
+  types: ReferenceType[];
+}
+
+
 export interface Project {
   id: string;
   name: string;

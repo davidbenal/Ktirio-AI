@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // A generic icon wrapper
@@ -10,6 +9,10 @@ const Icon: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
 
 export const KtirioLogo: React.FC<{ className?: string }> = ({ className = "text-xl font-black tracking-wide" }) => (
     <span className={className}>KTIRIO</span>
+);
+
+export const KIcon: React.FC<{ className?: string }> = ({ className = "text-2xl font-black" }) => (
+    <span className={className}>K</span>
 );
 
 export const SearchIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
@@ -135,4 +138,17 @@ export const EllipsisVerticalIcon: React.FC<{ className?: string }> = ({ classNa
 
 export const ArchiveIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
     <Icon className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4" /></Icon>
+);
+
+export const BackArrowIcon: React.FC<{ className?: string }> = ({ className = "h-6 w-6" }) => (
+    <Icon className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15m0 0l6.75 6.75M4.5 12l6.75-6.75" />
+    </Icon>
+);
+
+export const SpinnerIcon: React.FC<{ className?: string }> = ({ className = "h-6 w-6" }) => (
+    <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
 );

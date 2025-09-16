@@ -37,13 +37,13 @@ const App: React.FC = () => {
     setScreen('editor');
   };
 
-  const handleNewProjectFromVersion = (project: Project) => {
-    const currentImage = project.history[project.history.length - 1] || project.baseImage;
+  const handleNewProjectFromVersion = (project: Project, image?: string) => {
+    const sourceImage = image || project.history[project.history.length - 1] || project.baseImage;
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: `${project.name} (Versão)`,
-      baseImage: currentImage,
-      history: currentImage ? [currentImage] : [],
+      baseImage: sourceImage,
+      history: sourceImage ? [sourceImage] : [],
       folderId: project.folderId,
       createdAt: new Date().toISOString(),
       isFavorite: false,
@@ -141,7 +141,7 @@ const App: React.FC = () => {
                 onUpdateProject={handleUpdateProject}
                 onBackToGallery={handleBackToGallery}
                 onDuplicateProject={() => handleDuplicateProject(currentProject.id)}
-                onNewProjectFromVersion={() => handleNewProjectFromVersion(currentProject)}
+                onNewProjectFromVersion={(image?: string) => handleNewProjectFromVersion(currentProject, image)}
                 onToggleFavorite={() => handleToggleFavorite(currentProject.id)}
                 onToggleArchive={() => handleToggleArchive(currentProject.id)}
                 onMoveProject={(folderId: string) => handleMoveProject(currentProject.id, folderId)}
@@ -157,7 +157,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
+    <div className="min-h-screen bg-[#F7F7F8] font-sans text-gray-800">
       {renderScreen()}
     </div>
   );

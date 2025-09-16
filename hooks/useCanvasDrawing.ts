@@ -5,9 +5,10 @@ interface UseCanvasDrawingProps {
   canvas: RefObject<HTMLCanvasElement>;
   brushSize: number;
   brushMode: BrushMode;
+  zoom: number;
 }
 
-const useCanvasDrawing = ({ canvas, brushSize, brushMode }: UseCanvasDrawingProps) => {
+const useCanvasDrawing = ({ canvas, brushSize, brushMode, zoom }: UseCanvasDrawingProps) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const lastPosition = useRef<{ x: number; y: number } | null>(null);
 
@@ -17,9 +18,10 @@ const useCanvasDrawing = ({ canvas, brushSize, brushMode }: UseCanvasDrawingProp
     const rect = canvas.current.getBoundingClientRect();
     const point = 'touches' in event ? event.touches[0] : event;
 
+    // Adjust coordinates for canvas zoom level
     return {
-      x: point.clientX - rect.left,
-      y: point.clientY - rect.top,
+      x: (point.clientX - rect.left) / zoom,
+      y: (point.clientY - rect.top) / zoom,
     };
   };
 

@@ -10,15 +10,14 @@ interface CanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   maskCanvasRef: React.RefObject<HTMLCanvasElement>;
   onDrawingStop: (event: MouseEvent) => void;
+  zoom: number;
+  activeTool: 'draw' | 'select' | null;
 }
 
 export interface CanvasHandles {
     clearMask: () => void;
 }
 
-// FIX: Removed React.FC<CanvasProps> type annotation.
-// The type of a component created with React.forwardRef is not compatible with React.FC,
-// which does not accept a ref property. The correct type is inferred from forwardRef.
 const Canvas = forwardRef<CanvasHandles, CanvasProps>(({ 
     baseImage,
     generatedImage,
@@ -26,7 +25,9 @@ const Canvas = forwardRef<CanvasHandles, CanvasProps>(({
     brushMode,
     canvasRef,
     maskCanvasRef,
-    onDrawingStop
+    onDrawingStop,
+    zoom,
+    activeTool
 }, ref) => {
     
     const containerRef = useRef<HTMLDivElement>(null);
@@ -34,7 +35,8 @@ const Canvas = forwardRef<CanvasHandles, CanvasProps>(({
     const { isDrawing, startDrawing, draw, stopDrawing, clearCanvas } = useCanvasDrawing({
         canvas: maskCanvasRef,
         brushSize,
-        brushMode
+        brushMode,
+        zoom
     });
 
     useImperativeHandle(ref, () => ({
@@ -83,7 +85,10 @@ const Canvas = forwardRef<CanvasHandles, CanvasProps>(({
     }, [baseImage, generatedImage, canvasRef, maskCanvasRef]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        startDrawing(e.nativeEvent);
+        // Only start drawing if a tool is active to prevent conflict with panning
+        if (activeTool) {
+            startDrawing(e.nativeEvent);
+        }
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -108,10 +113,10 @@ const Canvas = forwardRef<CanvasHandles, CanvasProps>(({
 
     return (
         <div ref={containerRef} className="w-full h-full flex items-center justify-center relative">
-            <canvas ref={canvasRef} className="absolute" />
+            <canvas ref={canvasRef} className="absolute max-w-full max-h-full object-contain" />
             <canvas
                 ref={maskCanvasRef}
-                className="absolute cursor-crosshair"
+                className={`absolute max-w-full max-h-full object-contain ${activeTool ? 'cursor-crosshair' : ''}`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}

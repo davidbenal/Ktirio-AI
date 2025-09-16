@@ -1,9 +1,8 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from './Sidebar';
-import { CameraIcon, SparklesIcon, PencilIcon, ShareIcon, PaintBrushIcon, EraserIcon, DownloadIcon, HistoryIcon, SelectToolIcon } from './icons';
+import { CameraIcon, SparklesIcon, PencilIcon, ShareIcon, PaintBrushIcon, EraserIcon, DownloadIcon, HistoryIcon, SelectToolIcon, SpinnerIcon } from './icons';
 import Canvas, { CanvasHandles } from './Canvas';
-import { BrushMode, Project, Folder } from '../types';
+import { BrushMode, Project, Folder, ReferenceImage } from '../types';
 import { editImageWithMask } from '../services/geminiService';
 import EditPromptModal from './EditPromptModal';
 import RightSidebar from './RightSidebar';
@@ -14,11 +13,21 @@ interface EditorProps {
     onUpdateProject: (project: Project) => void;
     onBackToGallery: () => void;
     onDuplicateProject: () => void;
-    onNewProjectFromVersion: () => void;
+    onNewProjectFromVersion: (image?: string) => void;
     onToggleFavorite: () => void;
     onToggleArchive: () => void;
     onMoveProject: (folderId: string) => void;
 }
+
+const LoadingModal: React.FC = () => (
+    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-gray-800/90 text-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl">
+            <SpinnerIcon className="w-10 h-10 text-blue-400" />
+            <h3 className="text-xl font-bold">Processando com IA...</h3>
+            <p className="text-sm text-gray-300">Isso pode levar alguns segundos...</p>
+        </div>
+    </div>
+);
 
 
 const Editor: React.FC<EditorProps> = ({ 
@@ -41,19 +50,24 @@ const Editor: React.FC<EditorProps> = ({
     const [brushSize, setBrushSize] = useState<number>(44);
     const [brushMode, setBrushMode] = useState<BrushMode>(BrushMode.Draw);
     const [activeTool, setActiveTool] = useState<ActiveTool | null>(null);
-    const [objectImages, setObjectImages] = useState<string[]>([]);
+    const [objectImages, setObjectImages] = useState<ReferenceImage[]>([]);
     const [history, setHistory] = useState<string[]>(project.history);
     const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
     const [editModalPosition, setEditModalPosition] = useState<{ x: number, y: number } | null>(null);
     const [projectName, setProjectName] = useState<string>(project.name);
     const [isLeftSidebarVisible, setIsLeftSidebarVisible] = useState<boolean>(true);
     const [isRightSidebarVisible, setIsRightSidebarVisible] = useState<boolean>(true);
+    const [zoom, setZoom] = useState(1);
+    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const panStartRef = useRef({ x: 0, y: 0 });
     
     type ActiveTool = 'draw' | 'select';
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const maskCanvasRef = useRef<HTMLCanvasElement>(null);
     const canvasComponentRef = useRef<CanvasHandles>(null);
+    const canvasContainerRef = useRef<HTMLDivElement>(null);
 
     // Effect to update parent state when project changes internally
     useEffect(() => {
@@ -72,6 +86,8 @@ const Editor: React.FC<EditorProps> = ({
         setHistory(newHistory);
         setGeneratedImage(null);
         setObjectImages([]);
+        setZoom(1);
+        setPanOffset({ x: 0, y: 0 });
     };
 
     const getMaskData = (): string | null => {
@@ -79,11 +95,25 @@ const Editor: React.FC<EditorProps> = ({
         return maskCanvasRef.current.toDataURL('image/png');
     };
 
-    const handleObjectImageUpload = (imageDataUrl: string) => {
-        setObjectImages(prev => [...prev, imageDataUrl]);
+    const handleAddReferenceImage = (imageDataUrl: string) => {
+        const newRef: ReferenceImage = {
+            id: `ref-${Date.now()}`,
+            url: imageDataUrl,
+            name: `Referência ${objectImages.length + 1}`,
+            types: [],
+        };
+        setObjectImages(prev => [...prev, newRef]);
     };
 
-    const handleGenerate = async (promptToUse: string = prompt, objectsToUse: string[] = objectImages) => {
+    const handleUpdateReferenceImage = (updatedRef: ReferenceImage) => {
+        setObjectImages(prev => prev.map(ref => ref.id === updatedRef.id ? updatedRef : ref));
+    };
+
+    const handleDeleteReferenceImage = (refId: string) => {
+        setObjectImages(prev => prev.filter(ref => ref.id !== refId));
+    };
+
+    const handleGenerate = async (promptToUse: string = prompt, objectsToUse: ReferenceImage[] = objectImages) => {
         const imageToEdit = generatedImage || baseImage;
         if (!imageToEdit) {
             setError("Please upload an image first.");
@@ -138,7 +168,7 @@ const Editor: React.FC<EditorProps> = ({
         }
     };
 
-    const handleApplyEdit = async (modalPrompt: string, modalObjectImages: string[]) => {
+    const handleApplyEdit = async (modalPrompt: string, modalObjectImages: ReferenceImage[]) => {
         setIsEditModalOpen(false);
         await handleGenerate(modalPrompt, modalObjectImages);
     };
@@ -173,9 +203,43 @@ const Editor: React.FC<EditorProps> = ({
         }
     }
 
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+            setZoom(prevZoom => Math.max(0.2, Math.min(5, prevZoom * zoomFactor)));
+        }
+    };
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+        if (activeTool === null && e.button === 0 && baseImage) {
+            e.preventDefault();
+            panStartRef.current = { x: e.clientX, y: e.clientY };
+            setIsPanning(true);
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+        if (isPanning) {
+            const dx = e.clientX - panStartRef.current.x;
+            const dy = e.clientY - panStartRef.current.y;
+            setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+            panStartRef.current = { x: e.clientX, y: e.clientY };
+        }
+    };
+
+    const handleMouseUp = () => {
+        if (isPanning) {
+            setIsPanning(false);
+            if (zoom === 1) {
+                setPanOffset({ x: 0, y: 0 });
+            }
+        }
+    };
+
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex w-full h-screen p-4 gap-4 box-border">
             <Sidebar 
                 project={project}
                 folders={folders}
@@ -186,7 +250,9 @@ const Editor: React.FC<EditorProps> = ({
                 isLoading={isLoading}
                 baseImage={baseImage}
                 objectImages={objectImages}
-                onObjectImageUpload={handleObjectImageUpload}
+                onAddReferenceImage={handleAddReferenceImage}
+                onUpdateReferenceImage={handleUpdateReferenceImage}
+                onDeleteReferenceImage={handleDeleteReferenceImage}
                 projectName={projectName}
                 onProjectNameChange={setProjectName}
                 onShowHistory={() => setIsRightSidebarVisible(prev => !prev)}
@@ -195,36 +261,68 @@ const Editor: React.FC<EditorProps> = ({
                 onToggleCollapse={() => setIsLeftSidebarVisible(prev => !prev)}
                 onBackToGallery={onBackToGallery}
                 onDuplicateProject={onDuplicateProject}
-                onNewProjectFromVersion={onNewProjectFromVersion}
+                onNewProjectFromVersion={() => onNewProjectFromVersion()}
                 onToggleFavorite={onToggleFavorite}
                 onToggleArchive={onToggleArchive}
                 onMoveProject={onMoveProject}
             />
-            <main className="flex-1 flex flex-col p-0 relative">
-                <div className="flex-1 bg-gray-100 rounded-2xl p-4 flex flex-col relative">
+            <main 
+                className={`flex-1 flex flex-col relative bg-white rounded-2xl shadow-lg overflow-hidden ${isPanning ? 'cursor-grabbing' : activeTool === null && baseImage ? 'cursor-grab' : 'cursor-default'}`}
+                ref={canvasContainerRef}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+            >
+                
                     {baseImage ? (
                         <>
-                           <div className="absolute top-4 right-4 z-20">
-                                <button onClick={handleDownload} className="bg-white text-gray-700 px-4 py-2 rounded-lg shadow-md hover:bg-gray-50 flex items-center gap-2">
-                                    <DownloadIcon className="w-5 h-5" />
-                                    <span>Download da composição</span>
+                           <div className="absolute top-4 right-4 z-20 flex gap-2">
+                                <button onClick={handleDownload} className="bg-white text-gray-700 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm font-medium">
+                                    <DownloadIcon className="w-4 h-4" />
+                                    <span>Download</span>
+                                </button>
+                                <button onClick={() => setIsRightSidebarVisible(p => !p)} className="bg-white text-gray-700 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm font-medium">
+                                    <HistoryIcon className="w-4 h-4" />
+                                    <span>Histórico</span>
                                 </button>
                             </div>
-                            <Canvas
-                                ref={canvasComponentRef}
-                                baseImage={baseImage}
-                                generatedImage={generatedImage}
-                                brushSize={brushSize}
-                                brushMode={brushMode}
-                                canvasRef={canvasRef}
-                                maskCanvasRef={maskCanvasRef}
-                                onDrawingStop={handleDrawingStop}
-                            />
+                            <div 
+                                className="w-full h-full flex items-center justify-center relative transition-transform duration-100" 
+                                style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`}}
+                            >
+                                <Canvas
+                                    ref={canvasComponentRef}
+                                    baseImage={baseImage}
+                                    generatedImage={generatedImage}
+                                    brushSize={brushSize}
+                                    brushMode={brushMode}
+                                    canvasRef={canvasRef}
+                                    maskCanvasRef={maskCanvasRef}
+                                    onDrawingStop={handleDrawingStop}
+                                    zoom={zoom}
+                                    activeTool={activeTool}
+                                />
+                            </div>
+
+                            {zoom !== 1 && (
+                                <button
+                                    onClick={() => {
+                                        setZoom(1);
+                                        setPanOffset({ x: 0, y: 0 });
+                                    }}
+                                    className="absolute bottom-4 right-4 z-20 bg-white text-gray-700 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors text-sm font-medium"
+                                >
+                                    100%
+                                </button>
+                            )}
+
                             {/* Brush Controls */}
                            {activeTool && (
                              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-20">
-                                <div className="bg-gray-800/90 backdrop-blur-sm p-2 rounded-xl shadow-lg flex items-center gap-2">
-                                    <span className="text-white text-xs px-2">Pequeno</span>
+                                <div className="bg-white p-2 rounded-xl shadow-lg flex items-center gap-2 border border-gray-100">
+                                    <span className="text-gray-600 text-xs px-2">Pequeno</span>
                                     <input 
                                         type="range" 
                                         min="5" 
@@ -233,25 +331,25 @@ const Editor: React.FC<EditorProps> = ({
                                         onChange={(e) => setBrushSize(parseInt(e.target.value, 10))}
                                         className="w-32"
                                     />
-                                    <span className="text-white text-xs px-2">Grande</span>
-                                    <span className="w-8 text-center text-sm font-medium text-white">{brushSize}px</span>
+                                    <span className="text-gray-600 text-xs px-2">Grande</span>
+                                    <span className="w-10 text-center text-sm font-medium text-gray-800 bg-gray-100 rounded-md py-1">{brushSize}</span>
                                 </div>
                             </div>
                            )}
 
                              {/* Tool Selector */}
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800/90 backdrop-blur-sm p-2 rounded-full shadow-lg flex items-center gap-2 z-20">
-                                <button onClick={() => handleToolSelect('draw')} className={`p-3 rounded-full ${activeTool === 'draw' ? 'bg-white text-gray-800' : 'text-white hover:bg-white/20'}`}><PaintBrushIcon className="w-6 h-6"/></button>
-                                <button onClick={() => handleToolSelect('select')} className={`p-3 rounded-full ${activeTool === 'select' ? 'bg-white text-gray-800' : 'text-white hover:bg-white/20'}`}><SelectToolIcon className="w-6 h-6"/></button>
-                                <div className="h-6 w-px bg-white/30 mx-1"></div>
-                                <button onClick={() => setBrushMode(brushMode === BrushMode.Draw ? BrushMode.Erase : BrushMode.Draw)} className={`p-3 rounded-full ${brushMode === BrushMode.Erase ? 'bg-white text-gray-800' : 'text-white hover:bg-white/20'}`}><EraserIcon className="w-6 h-6"/></button>
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white backdrop-blur-sm p-2 rounded-full shadow-lg flex items-center gap-1 border border-gray-100 z-20">
+                                <button onClick={() => handleToolSelect('draw')} className={`p-3 rounded-full ${activeTool === 'draw' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-100'}`}><PaintBrushIcon className="w-5 h-5"/></button>
+                                <button onClick={() => handleToolSelect('select')} className={`p-3 rounded-full ${activeTool === 'select' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-100'}`}><SelectToolIcon className="w-5 h-5"/></button>
+                                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+                                <button onClick={() => setBrushMode(brushMode === BrushMode.Draw ? BrushMode.Erase : BrushMode.Draw)} className={`p-3 rounded-full ${brushMode === BrushMode.Erase ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-100'}`}><EraserIcon className="w-5 h-5"/></button>
                             </div>
                         </>
                     ) : (
                         <WelcomeView onImageUpload={handleSetBaseImage} />
                     )}
-                    {error && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 bg-red-100 text-red-700 p-3 rounded-lg z-30">{error}</div>}
-                </div>
+                    {isLoading && <LoadingModal />}
+                    {error && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 bg-red-100 text-red-700 p-3 rounded-lg z-30 shadow-lg border border-red-200">{error}</div>}
             </main>
             <RightSidebar
                 history={history}
@@ -259,6 +357,7 @@ const Editor: React.FC<EditorProps> = ({
                 onToggleCollapse={() => setIsRightSidebarVisible(prev => !prev)}
                 onSelect={handleSelectHistory}
                 currentImage={generatedImage || baseImage}
+                onNewProjectFromVersion={onNewProjectFromVersion}
             />
             {isEditModalOpen && editModalPosition && (
                 <EditPromptModal 
@@ -274,14 +373,14 @@ const Editor: React.FC<EditorProps> = ({
 
 
 const InfoCard: React.FC<{ num: string; title: string; icon: React.ReactNode }> = ({ num, title, icon }) => (
-    <div className="flex flex-col items-start p-4 text-left">
-      <div className="flex items-center gap-4">
-        <div className="text-gray-500 font-light">{num}</div>
-        <div className="bg-gray-100 p-3 rounded-lg text-gray-700">
-          {icon}
-        </div>
+    <div className="flex items-center gap-4 text-left p-4">
+      <div className="bg-gray-100/80 p-3 rounded-lg text-gray-700">
+        {icon}
       </div>
-      <p className="mt-4 text-gray-800 text-sm">{title}</p>
+      <div>
+        <p className="text-gray-500 text-xs font-semibold">{num}</p>
+        <p className="text-gray-800 text-sm font-medium">{title}</p>
+      </div>
     </div>
 );
   
@@ -301,25 +400,25 @@ const WelcomeView: React.FC<{onImageUpload: (dataUrl: string) => void}> = ({onIm
     };
     
     return (
-        <div className="flex-1 flex items-center justify-center flex-col text-center p-8 bg-gray-50 rounded-xl"
-             style={{ backgroundImage: `url(https://picsum.photos/1200/800?grayscale&blur=1)`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <div className="bg-white/50 backdrop-blur-md p-10 rounded-2xl shadow-xl">
+        <div className="flex-1 flex items-center justify-center flex-col text-center p-8 bg-gray-50/50">
+            <div className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl max-w-3xl">
                 <h2 className="text-3xl font-bold text-gray-800">O que vamos criar hoje?</h2>
-                <div className="mt-8 w-full max-w-2xl bg-white/30 border border-white/20 rounded-2xl p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-300/50">
-                        <InfoCard num="01" title="Envie foto do ambiente" icon={<CameraIcon className="h-8 w-8" />} />
-                        <InfoCard num="02" title="Decore e customize do seu jeito" icon={<SparklesIcon className="h-8 w-8" />} />
-                        <InfoCard num="03" title="Edite ou inclua objetos no ambiente" icon={<PencilIcon className="h-8 w-8" />} />
-                        <InfoCard num="04" title="Baixe e compartilhe" icon={<ShareIcon className="h-8 w-8" />} />
+                <p className="text-gray-600 mt-2">Comece enviando uma foto do ambiente que você deseja transformar.</p>
+                <div className="mt-8 w-full bg-white/50 border border-gray-200/80 rounded-2xl p-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+                        <InfoCard num="01" title="Envie a foto" icon={<CameraIcon className="h-7 w-7" />} />
+                        <InfoCard num="02" title="Decore e customize" icon={<SparklesIcon className="h-7 w-7" />} />
+                        <InfoCard num="03" title="Edite ou inclua" icon={<PencilIcon className="h-7 w-7" />} />
+                        <InfoCard num="04" title="Baixe e compartilhe" icon={<ShareIcon className="h-7 w-7" />} />
                     </div>
                 </div>
                 <div className="mt-8 flex gap-4 justify-center">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                    <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
+                    <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-transform hover:scale-105">
                         Upload de foto
                     </button>
                     {/* Placeholder for camera functionality */}
-                    <button className="px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                    <button className="px-6 py-3 bg-white text-gray-800 font-semibold rounded-lg hover:bg-gray-100 border border-gray-200 transition-transform hover:scale-105">
                         Tirar foto
                     </button>
                 </div>
