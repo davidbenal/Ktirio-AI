@@ -46,8 +46,8 @@ const useCanvasDrawing = ({ canvas, brushSize, brushMode, zoom }: UseCanvasDrawi
 
     if (brushMode === BrushMode.Draw) {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)'; // A semi-transparent red for the mask
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // Use semi-transparent white for the mask
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     } else {
       ctx.globalCompositeOperation = 'destination-out';
     }

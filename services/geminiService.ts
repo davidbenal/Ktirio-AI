@@ -20,8 +20,6 @@ export async function editImageWithMask(
   objectImages: ReferenceImage[]
 ): Promise<{ image: string | null; text: string | null }> {
     try {
-        const enhancedPrompt = `Strictly follow the masked area for editing. The user has provided a mask to indicate the precise location for the changes. Only modify the pixels within the masked region. Do not alter any part of the image outside the mask. The user's prompt is: "${prompt}"`;
-
         const baseImageBlob = dataUrlToBlob(baseImage);
         const maskImageBlob = dataUrlToBlob(maskImage);
 
@@ -36,7 +34,7 @@ export async function editImageWithMask(
         });
 
         const parts = [
-            { text: enhancedPrompt },
+            { text: prompt },
             {
                 inlineData: {
                     data: baseImageBlob.data,
