@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { UserButton, useUser } from '@clerk/clerk-react';
 import { Project, Folder } from '../types';
 import { KtirioLogo, PlusIcon, SearchIcon, GalleryIcon, FolderIcon, FolderPlusIcon, EllipsisVerticalIcon, StarIcon, ArchiveIcon } from './icons';
+import { useConfirmModal } from '../hooks/useConfirmModal';
 
 interface ProjectGalleryProps {
     projects: Project[];
@@ -16,10 +18,10 @@ interface ProjectGalleryProps {
     onMoveProject: (projectId: string, folderId: string) => void;
 }
 
-const ProjectGallery: React.FC<ProjectGalleryProps> = ({ 
-    projects, 
-    folders, 
-    onNewProject, 
+const ProjectGallery: React.FC<ProjectGalleryProps> = ({
+    projects,
+    folders,
+    onNewProject,
     onSelectProject,
     onDeleteProject,
     onRenameProject,
@@ -32,6 +34,8 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [selectedFolderId, setSelectedFolderId] = useState('all');
     const menuRef = useRef<HTMLDivElement>(null);
+    const { user } = useUser();
+    const { prompt } = useConfirmModal();
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -45,17 +49,51 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
         };
     }, []);
 
-    const handleRename = (project: Project) => {
-        const newName = window.prompt("Digite o novo nome do projeto:", project.name);
-        if (newName && newName.trim() !== "") {
+    const handleRename = async (project: Project) => {
+        const newName = await prompt({
+            title: 'Renomear Projeto',
+            message: 'Digite o novo nome do projeto:',
+            initialValue: project.name,
+            placeholder: 'Nome do projeto',
+            confirmText: 'Renomear',
+            validation: (value) => {
+                if (!value.trim()) {
+                    return 'O nome do projeto não pode estar vazio';
+                }
+                if (value.trim().length > 100) {
+                    return 'O nome do projeto não pode ter mais de 100 caracteres';
+                }
+                return null;
+            },
+        });
+
+        if (newName) {
             onRenameProject(project.id, newName.trim());
         }
         setOpenMenuId(null);
     };
     
-    const handleCreateFolder = () => {
-        const folderName = window.prompt("Digite o nome da nova pasta:");
-        if (folderName && folderName.trim() !== "") {
+    const handleCreateFolder = async () => {
+        const folderName = await prompt({
+            title: 'Nova Pasta',
+            message: 'Digite o nome da nova pasta:',
+            placeholder: 'Nome da pasta',
+            confirmText: 'Criar',
+            validation: (value) => {
+                if (!value.trim()) {
+                    return 'O nome da pasta não pode estar vazio';
+                }
+                if (value.trim().length > 50) {
+                    return 'O nome da pasta não pode ter mais de 50 caracteres';
+                }
+                if (folders.some(f => f.name.toLowerCase() === value.trim().toLowerCase())) {
+                    return 'Já existe uma pasta com esse nome';
+                }
+                return null;
+            },
+        });
+
+        if (folderName) {
             onNewFolder(folderName.trim());
         }
     };
@@ -125,6 +163,34 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
                         </ul>
                     </div>
                 </nav>
+
+                {/* User Button - Parte inferior do sidebar */}
+                <div className="mt-auto pt-4 border-t border-gray-200">
+                    <div className="flex items-center gap-3">
+                        <UserButton
+                            afterSignOutUrl="/sign-in"
+                            appearance={{
+                                elements: {
+                                    avatarBox: "w-10 h-10 cursor-pointer",
+                                    userButtonPopoverCard: "shadow-lg",
+                                    userButtonPopoverActionButton: "hover:bg-gray-100",
+                                    userButtonPopoverFooter: "hidden",
+                                    userButtonTrigger: "focus:shadow-none"
+                                }
+                            }}
+                        />
+                        {user && (
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                    {user.firstName || user.username || 'Usuário'}
+                                </p>
+                                <p className="text-xs text-gray-500 truncate">
+                                    {user.primaryEmailAddress?.emailAddress}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </aside>
 
             {/* Floating Main Content */}

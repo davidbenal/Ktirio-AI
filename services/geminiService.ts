@@ -1,11 +1,13 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { ReferenceImage } from "../types";
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable is not set.");
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!apiKey) {
+    throw new Error("VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env.local file.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey });
 
 const dataUrlToBlob = (dataUrl: string): { data: string, mimeType: string } => {
     const [header, data] = dataUrl.split(',');
