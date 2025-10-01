@@ -3,6 +3,9 @@ import { UserButton, useUser } from '@clerk/clerk-react';
 import { Project, Folder } from '../types';
 import { KtirioLogo, PlusIcon, SearchIcon, GalleryIcon, FolderIcon, FolderPlusIcon, EllipsisVerticalIcon, StarIcon, ArchiveIcon } from './icons';
 import { useConfirmModal } from '../hooks/useConfirmModal';
+import SolutionsSection from './SolutionsSection';
+import CreditsWidget from './CreditsWidget';
+import AccountDropdown from './AccountDropdown';
 
 interface ProjectGalleryProps {
     projects: Project[];
@@ -33,9 +36,60 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
 }) => {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [selectedFolderId, setSelectedFolderId] = useState('all');
+    const [selectedSolutionId, setSelectedSolutionId] = useState<string | undefined>();
     const menuRef = useRef<HTMLDivElement>(null);
     const { user } = useUser();
     const { prompt } = useConfirmModal();
+
+    // Mock credits data - replace with actual data from your backend
+    const creditsData = {
+        total: 90000,
+        remaining: 90000,
+        resetDate: '01/11',
+    };
+
+    const handleUpgrade = () => {
+        // TODO: Implement upgrade logic - open Stripe checkout
+        console.log('Upgrade clicked - Opening Stripe checkout...');
+        // Example: window.location.href = '/checkout';
+    };
+
+    const handleSelectSolution = (solutionId: string) => {
+        setSelectedSolutionId(solutionId);
+        // TODO: Navigate to solution or update UI accordingly
+        console.log('Selected solution:', solutionId);
+    };
+
+    const handleProfile = () => {
+        console.log('Navigating to Profile settings...');
+        // TODO: Implement profile navigation
+    };
+
+    const handleSettings = () => {
+        console.log('Navigating to Settings...');
+        // TODO: Implement settings navigation
+    };
+
+    const handleSubscription = () => {
+        console.log('Navigating to Subscription management...');
+        // TODO: Implement subscription page navigation
+    };
+
+    const handleUsageAndCredits = () => {
+        console.log('Navigating to Usage and Credits...');
+        // TODO: Implement usage page navigation
+    };
+
+    const handleTheme = () => {
+        console.log('Opening Theme selector...');
+        // TODO: Implement theme switcher
+    };
+
+    const handleDocumentation = () => {
+        console.log('Opening Documentation...');
+        // TODO: Open documentation in new tab
+        // window.open('https://docs.ktirio.ai', '_blank');
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -118,6 +172,18 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
         {/* Floating Header */}
         <header className="h-16 bg-white rounded-2xl shadow-lg flex-shrink-0 flex items-center px-6 justify-between z-10">
             <KtirioLogo className="text-2xl font-black tracking-wide" />
+            <AccountDropdown
+                creditsTotal={creditsData.total}
+                creditsRemaining={creditsData.remaining}
+                planType="Free"
+                onUpgrade={handleUpgrade}
+                onProfile={handleProfile}
+                onSettings={handleSettings}
+                onSubscription={handleSubscription}
+                onUsageAndCredits={handleUsageAndCredits}
+                onTheme={handleTheme}
+                onDocumentation={handleDocumentation}
+            />
         </header>
 
         <div className="flex-grow flex gap-4 overflow-hidden">
@@ -162,10 +228,24 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
                             ))}
                         </ul>
                     </div>
+
+                    {/* Solutions Section */}
+                    <SolutionsSection
+                        selectedSolutionId={selectedSolutionId}
+                        onSelectSolution={handleSelectSolution}
+                    />
                 </nav>
 
+                {/* Credits Widget */}
+                <CreditsWidget
+                    total={creditsData.total}
+                    remaining={creditsData.remaining}
+                    resetDate={creditsData.resetDate}
+                    onUpgrade={handleUpgrade}
+                />
+
                 {/* User Button - Parte inferior do sidebar */}
-                <div className="mt-auto pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-gray-200">
                     <div className="flex items-center gap-3">
                         <UserButton
                             afterSignOutUrl="/sign-in"
