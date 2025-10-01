@@ -5,7 +5,15 @@
       "Bash(npm install:*)",
       "WebFetch(domain:clerk.com)",
       "Bash(npm run build:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(npm ls:*)",
+      "Bash(pkill:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm run preview:*)",
+      "Bash(tree:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
