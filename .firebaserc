@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "ktirio-ai-4540c"
-  }
+  },
+  "targets": {
+    "ktirio-ai-4540c": {
+      "hosting": {
+        "main": [
+          "ktirio-ai-4540c"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
