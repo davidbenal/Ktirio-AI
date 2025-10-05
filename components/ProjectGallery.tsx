@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserButton, useUser } from '@clerk/clerk-react';
+import { useNavigate } from 'react-router-dom';
 import { Project, Folder } from '../types';
 import { KtirioLogo, PlusIcon, SearchIcon, GalleryIcon, FolderIcon, FolderPlusIcon, EllipsisVerticalIcon, StarIcon, ArchiveIcon } from './icons';
 import { useConfirmModal } from '../hooks/useConfirmModal';
@@ -40,6 +41,7 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
     const menuRef = useRef<HTMLDivElement>(null);
     const { user } = useUser();
     const { prompt } = useConfirmModal();
+    const navigate = useNavigate();
 
     // Mock credits data - replace with actual data from your backend
     const creditsData = {
@@ -49,35 +51,29 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
     };
 
     const handleUpgrade = () => {
-        // TODO: Implement upgrade logic - open Stripe checkout
-        console.log('Upgrade clicked - Opening Stripe checkout...');
-        // Example: window.location.href = '/checkout';
+        navigate('/pricing');
     };
 
     const handleSelectSolution = (solutionId: string) => {
         setSelectedSolutionId(solutionId);
-        // TODO: Navigate to solution or update UI accordingly
         console.log('Selected solution:', solutionId);
     };
 
     const handleProfile = () => {
-        console.log('Navigating to Profile settings...');
-        // TODO: Implement profile navigation
+        navigate('/profile');
     };
 
     const handleSettings = () => {
         console.log('Navigating to Settings...');
-        // TODO: Implement settings navigation
+        // TODO: Implement settings page
     };
 
     const handleSubscription = () => {
-        console.log('Navigating to Subscription management...');
-        // TODO: Implement subscription page navigation
+        navigate('/pricing');
     };
 
     const handleUsageAndCredits = () => {
-        console.log('Navigating to Usage and Credits...');
-        // TODO: Implement usage page navigation
+        navigate('/profile');
     };
 
     const handleTheme = () => {
@@ -86,9 +82,7 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({
     };
 
     const handleDocumentation = () => {
-        console.log('Opening Documentation...');
-        // TODO: Open documentation in new tab
-        // window.open('https://docs.ktirio.ai', '_blank');
+        window.open('https://docs.ktirio.ai', '_blank');
     };
 
     useEffect(() => {

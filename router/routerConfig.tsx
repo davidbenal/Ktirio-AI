@@ -5,6 +5,10 @@ import ProjectGallery from '../components/ProjectGallery';
 import Editor from '../components/Editor';
 import SignInPage from '../components/SignInPage';
 import SignUpPage from '../components/SignUpPage';
+import SuccessPage from '../components/SuccessPage';
+import CancelPage from '../components/CancelPage';
+import ProfilePage from '../components/ProfilePage';
+import PricingPage from '../components/PricingPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 
 // Route constants and helpers
@@ -16,6 +20,10 @@ export const ROUTES = {
   GALLERY: '/gallery',
   EDITOR: '/editor',
   EDITOR_WITH_PROJECT: '/editor/:projectId',
+  PRICING: '/pricing',
+  SUCCESS: '/success',
+  CANCEL: '/cancel',
+  PROFILE: '/profile',
   NOT_FOUND: '*'
 } as const;
 
@@ -104,6 +112,50 @@ export const routes: AppRoute[] = [
       isProtected: true
     },
     wrapper: ProtectedRoute
+  },
+  {
+    path: ROUTES.PRICING,
+    name: 'Pricing',
+    component: PricingPage,
+    wrapper: ProtectedRoute,
+    meta: {
+      title: 'Planos e Preços - Ktírio',
+      description: 'Escolha o plano ideal para você',
+      isProtected: true
+    }
+  },
+  {
+    path: ROUTES.SUCCESS,
+    name: 'Success',
+    component: SuccessPage,
+    wrapper: ProtectedRoute,
+    meta: {
+      title: 'Pagamento Confirmado - Ktírio',
+      description: 'Sua assinatura foi ativada com sucesso',
+      isProtected: true
+    }
+  },
+  {
+    path: ROUTES.CANCEL,
+    name: 'Cancel',
+    component: CancelPage,
+    wrapper: ProtectedRoute,
+    meta: {
+      title: 'Pagamento Cancelado - Ktírio',
+      description: 'Você cancelou o processo de pagamento',
+      isProtected: true
+    }
+  },
+  {
+    path: ROUTES.PROFILE,
+    name: 'Profile',
+    component: ProfilePage,
+    wrapper: ProtectedRoute,
+    meta: {
+      title: 'Perfil - Ktírio',
+      description: 'Gerencie sua conta e assinatura',
+      isProtected: true
+    }
   },
   {
     path: ROUTES.NOT_FOUND,

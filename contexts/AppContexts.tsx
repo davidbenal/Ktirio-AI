@@ -5,6 +5,7 @@ import { ProjectsProvider } from './ProjectsContext';
 import { FoldersProvider } from './FoldersContext';
 import { NavigationProvider } from './NavigationContext';
 import { ModalProvider } from './ModalContext';
+import { CreditsProvider } from './CreditsContext';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -24,11 +25,13 @@ export const AppContexts: React.FC<AppContextsProps> = ({ children }) => {
       <BrowserRouter>
         <NavigationProvider>
           <ModalProvider>
-            <FoldersProvider>
-              <ProjectsProvider>
-                {children}
-              </ProjectsProvider>
-            </FoldersProvider>
+            <CreditsProvider>
+              <FoldersProvider>
+                <ProjectsProvider>
+                  {children}
+                </ProjectsProvider>
+              </FoldersProvider>
+            </CreditsProvider>
           </ModalProvider>
         </NavigationProvider>
       </BrowserRouter>

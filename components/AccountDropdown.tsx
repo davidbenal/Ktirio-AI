@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 
 interface MenuItem {
-  icon: string;
-  label: string;
+  icon?: string;
+  label?: string;
   hasSubmenu?: boolean;
   isDivider?: boolean;
   isDestructive?: boolean;

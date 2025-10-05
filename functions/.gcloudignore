@@ -1,0 +1,20 @@
+# Node modules (will be installed on cloud)
+node_modules/
+
+# Test files
+test/
+*.test.ts
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git files
+.git/
